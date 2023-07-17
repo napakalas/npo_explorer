@@ -109,12 +109,12 @@ class NPOExplorer():
             elif rst['Predicate']['value'] in QUERIES.PREDICATES['LABEL']:
                 long_label = rst['Object']['value']
             # get all labels
-            if 'Object_Label' in rst and rst['Object']['type']=='uri':
-                self.__labels[rst['Object']['value']] = rst['Object_Label']['value']
-            if 'Region_Label' in rst and rst['Region']['type']=='uri':
-                self.__labels[rst['Region']['value']] = rst['Region_Label']['value']
-            if 'Layer_Label' in rst and rst['Layer']['type']=='uri':
-                self.__labels[rst['Layer']['value']] = rst['Layer_Label']['value']
+            if 'Object' in rst and rst['Object']['type']=='uri':
+                self.__labels[rst['Object']['value']] = rst['Object_Label']['value'] if 'Object_Label' in rst else ''
+            if 'Region' in rst and rst['Region']['type']=='uri':
+                self.__labels[rst['Region']['value']] = rst['Region_Label']['value'] if 'Region_Label' in rst else ''
+            if 'Layer' in rst and rst['Layer']['type']=='uri':
+                self.__labels[rst['Layer']['value']] = rst['Layer_Label']['value'] if 'Layer_Label' in rst else ''
         
         # set neuron label
         self.__labels['entity'] = long_label
