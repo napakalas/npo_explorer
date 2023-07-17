@@ -1,0 +1,13 @@
+[tool.poetry]
+name = "npoexplorer"
+version = "0.0.1"
+description = ""
+authors = ["Yuda Munarko <yuda.munarko@auckland.ac.nz>"]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4.0"
+pystardog = "^0.16.1"
+
+[build-system]
+requires = ["poetry_core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
