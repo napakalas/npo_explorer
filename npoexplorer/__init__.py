@@ -146,7 +146,7 @@ class NPOExplorer():
                 log.ERROR(f'Cannot load {ttl_file}')
         from rdflib.namespace import Namespace
         rdfs = Namespace(NAMESPACES.namespaces['rdfs'])
-        for subject, obj in graph.subject_objects(rdfs.label):
+        for subject, obj in self.__graph.subject_objects(rdfs.label):
             self.__labels[NAMESPACES.curie(str(subject))] = str(obj)
             
     def __select(self, query):
@@ -236,6 +236,9 @@ class NPOExplorer():
     def __get_neuron_knowledge(self, entity):
         query = QUERIES.NEURON.format(entity=entity)
         _, results = self.__select(query)
+
+        if len(results) == 0:
+            return {'label' : entity}
 
         def get_node(rst, nodes):
             obj = rst['Object']['value']
