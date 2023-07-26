@@ -59,7 +59,7 @@ __version__ = '0.0.1'
 #===============================================================================
 
 class NPOExplorer():
-    def __init__(self) -> None:
+    def __init__(self, conn_allow_duplicate=False) -> None:
         connection_details = {
             'endpoint': NPO_API_ENDPOINT,
             'username': NPO_USERNAME,
@@ -70,7 +70,7 @@ class NPOExplorer():
         self.__connectivity_models = self.__get_connectivity_models()
         self.__labels = {}
         # self.__load_npo_as_graph()
-        self.__load_npo_connectivities()
+        self.__load_npo_connectivities(conn_allow_duplicate)
 
         _, db_version = self.__select(QUERIES.DB_VERSION)
         self.__metadata = {'SimpleSCKAN': db_version[0]['SimpleSCKAN']['value'], 
@@ -79,7 +79,7 @@ class NPOExplorer():
         npo_term = f'NPO built at {self.__metadata["NPO"]}'
         log.info(f'NPO Explorer version {__version__} using {s_sckan_term} and {npo_term}')
 
-    def __load_npo_connectivities(self):
+    def __load_npo_connectivities(self, allow_duplicate):
         # loading partial connectivities from NPO repository
         # due to unvailability in stardog
         url = f'{NPO_SOURCE}{NPO_DIR}/{NPO_FILES["PARTIAL_ORDER"]}'
@@ -120,18 +120,19 @@ class NPOExplorer():
                 pattern = r'(ILX:\d+|UBERON:\d+)'
                 nested_structure = re.sub(pattern, r'"\1"', nested_structure)        
                 # Specifying tuple
-                nested_structure = nested_structure.replace(' )', ', )').replace(' ( ', ', ( ')
+                nested_structure = nested_structure.replace(' )', ', )') \
+                    .replace(' ( ', ', ( ')
                 # convert to tuple
                 conn_structure = ast.literal_eval(nested_structure)
                 # parse connectivities
                 connectivities = []
                 if conn_structure != 'blank':
                     if len(conn_structure) > 1:
-                        
-                        root = (list(reversed(conn_structure[0]))[0], tuple(list(reversed(conn_structure[0]))[1:])) \
-                            if isinstance(conn_structure[0], list) else (conn_structure[0], ())
+                        root = (list(reversed(conn_structure[0]))[0], 
+                                tuple(list(reversed(conn_structure[0]))[1:])) \
+                                    if isinstance(conn_structure[0], list) else (conn_structure[0], ())
                         parse_connectivities(connectivities, conn_structure[1:], root)
-                self.__connectivities[neuron.strip()] = connectivities  
+                self.__connectivities[neuron.strip()] = connectivities if allow_duplicate else tuple(set(connectivities))
 
     def __load_npo_as_graph(self):
         # this function is prepared to generate npo graph
