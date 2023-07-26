@@ -59,7 +59,7 @@ __version__ = '0.0.1'
 #===============================================================================
 
 class NPOExplorer():
-    def __init__(self, conn_allow_duplicate=False) -> None:
+    def __init__(self, allow_loop=False) -> None:
         connection_details = {
             'endpoint': NPO_API_ENDPOINT,
             'username': NPO_USERNAME,
@@ -70,7 +70,7 @@ class NPOExplorer():
         self.__connectivity_models = self.__get_connectivity_models()
         self.__labels = {}
         # self.__load_npo_as_graph()
-        self.__load_npo_connectivities(conn_allow_duplicate)
+        self.__load_npo_connectivities(allow_loop)
 
         _, db_version = self.__select(QUERIES.DB_VERSION)
         self.__metadata = {'SimpleSCKAN': db_version[0]['SimpleSCKAN']['value'], 
@@ -79,7 +79,7 @@ class NPOExplorer():
         npo_term = f'NPO built at {self.__metadata["NPO"]}'
         log.info(f'NPO Explorer version {__version__} using {s_sckan_term} and {npo_term}')
 
-    def __load_npo_connectivities(self, allow_duplicate):
+    def __load_npo_connectivities(self, allow_loop):
         # loading partial connectivities from NPO repository
         # due to unvailability in stardog
         url = f'{NPO_SOURCE}{NPO_DIR}/{NPO_FILES["PARTIAL_ORDER"]}'
@@ -98,14 +98,14 @@ class NPOExplorer():
                 adj = (list(reversed(sub_sub[0]))[0], tuple(list(reversed(sub_sub[0]))[1:])) \
                     if isinstance(sub_sub[0], list) else (sub_sub[0], ())
                 if root != ('blank', ()):
-                    connectivities += [(root, adj)]
+                    if root != adj or allow_loop:
+                        connectivities += [(root, adj)]
                 if len(sub_sub) > 1:
                     parse_connectivities(connectivities, sub_sub[1:], adj)
 
         self.__connectivities = {}
         for partial_order in partial_order_text.split('\n\n'):
             if 'neuronPartialOrder' in partial_order:
-                connectivities = []
                 neuron, nested_structure = partial_order.split('ilxtr:neuronPartialOrder')
                 nested_structure = nested_structure.replace('.','')
                 # replace consecutive space with a single space
@@ -132,7 +132,7 @@ class NPOExplorer():
                                 tuple(list(reversed(conn_structure[0]))[1:])) \
                                     if isinstance(conn_structure[0], list) else (conn_structure[0], ())
                         parse_connectivities(connectivities, conn_structure[1:], root)
-                self.__connectivities[neuron.strip()] = connectivities if allow_duplicate else tuple(set(connectivities))
+                self.__connectivities[neuron.strip()] = connectivities
 
     def __load_npo_as_graph(self):
         # this function is prepared to generate npo graph
