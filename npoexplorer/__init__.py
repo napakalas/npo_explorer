@@ -32,10 +32,21 @@ NPO_FILES = {
     'SIMP_SHEET': 'apinat-simple-sheet.ttl',
     'NLP': 'sparc-nlp.ttl',
 }
+        
+SCKAN_TO_NPO_MODEL = {
+    'https://apinatomy.org/uris/models/ard-arm-cardiac': 'ilxtr:NeuronAacar',
+    'https://apinatomy.org/uris/models/bolser-lewis': 'ilxtr:NeuronBolew',
+    'https://apinatomy.org/uris/models/bronchomotor': 'ilxtr:NeuronBromo',
+    'https://apinatomy.org/uris/models/keast-bladder': 'ilxtr:NeuronKblad',
+    'https://apinatomy.org/uris/models/pancreas': 'ilxtr:NeuronPancr',
+    'https://apinatomy.org/uris/models/sawg-distal-colon': 'ilxtr:NeuronSdcol',
+    'https://apinatomy.org/uris/models/spleen': 'ilxtr:NeuronSplen',
+    'https://apinatomy.org/uris/models/sawg-stomach': 'ilxtr:NeuronSstom'
+}
 
-NPO_PARTIAL_ORDER = 'apinat-partial-orders.ttl'
-
-
+NPO_TO_SCKAN_MODEL = {
+    term_npo:term_sckan for term_sckan, term_npo in SCKAN_TO_NPO_MODEL.items()
+}
 
 #===============================================================================
 
@@ -221,7 +232,6 @@ class NPOExplorer():
             self.__labels[rst['Region']['value']] = rst['Region_Label']['value'] if 'Region_Label' in rst else ''
             self.__labels[rst['Layer']['value']] = rst['Layer_Label']['value'] if 'Layer_Label' in rst else ''
             
-
     def __get_neuron_knowledge(self, entity):
         query = QUERIES.NEURON.format(entity=entity)
         _, results = self.__select(query)
@@ -308,6 +318,8 @@ class NPOExplorer():
         return self.__connectivity_models
     
     def entity_knowledge(self, entity):
+        if entity in SCKAN_TO_NPO_MODEL:
+            entity = SCKAN_TO_NPO_MODEL[entity]
         entity = NAMESPACES.curie(entity)
         if entity in self.__connectivity_models:
             return self.__get_model_knowledge(entity)
@@ -318,7 +330,9 @@ class NPOExplorer():
         return self.__labels
     
     def label(self, entity):
-        return self.__labels[entity]
+        if entity in  self.__labels:
+            return self.__labels[entity]
+        return ''
     
     def metadata(self, name=None):
         if name==None:
