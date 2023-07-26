@@ -25,6 +25,3 @@ if __name__ == '__main__':
     print_knowledge(store, KEAST_MODEL)
     print_knowledge(store, KEAST_NEURON(9))
     store.close()
-
-if __name__ == '__main__':
-    explorer = NPOExplorer()
