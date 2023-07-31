@@ -230,8 +230,12 @@ class NPOExplorer():
         query = QUERIES.CONNECTIVITY.format(entity=entity)
         _, results = self.__select(query)
         for rst in results:
-            self.__labels[rst['Region']['value']] = rst['Region_Label']['value'] if 'Region_Label' in rst else ''
-            self.__labels[rst['Layer']['value']] = rst['Layer_Label']['value'] if 'Layer_Label' in rst else ''
+            if 'Region' in rst:
+                if rst['Region']['type']=='uri':
+                    self.__labels[rst['Region']['value']] = rst['Region_Label']['value'] if 'Region_Label' in rst else ''
+            if 'Layer' in rst:
+                if rst['Layer']['type']=='uri':
+                    self.__labels[rst['Layer']['value']] = rst['Layer_Label']['value'] if 'Layer_Label' in rst else ''
             
     def __get_neuron_knowledge(self, entity):
         query = QUERIES.NEURON.format(entity=entity)
@@ -285,10 +289,10 @@ class NPOExplorer():
             # get all labels
             if 'Object' in rst and rst['Object']['type']=='uri':
                 self.__labels[rst['Object']['value']] = rst['Object_Label']['value'] if 'Object_Label' in rst else ''
-            if 'Region' in rst and rst['Region']['type']=='uri':
-                self.__labels[rst['Region']['value']] = rst['Region_Label']['value'] if 'Region_Label' in rst else ''
-            if 'Layer' in rst and rst['Layer']['type']=='uri':
-                self.__labels[rst['Layer']['value']] = rst['Layer_Label']['value'] if 'Layer_Label' in rst else ''
+            # if 'Region' in rst and rst['Region']['type']=='uri':
+            #     self.__labels[rst['Region']['value']] = rst['Region_Label']['value'] if 'Region_Label' in rst else ''
+            # if 'Layer' in rst and rst['Layer']['type']=='uri':
+            #     self.__labels[rst['Layer']['value']] = rst['Layer_Label']['value'] if 'Layer_Label' in rst else ''
         
         # set neuron label
         self.__labels[entity] = long_label
