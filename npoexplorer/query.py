@@ -53,10 +53,25 @@ class QUERIES:
     """ 
 
     MODEL_KNOWLEDGE = """
-        SELECT DISTINCT ?Neuron_ID ?Reference WHERE{{
-        ?Neuron_ID rdfs:subClassOf {entity} .
-        OPTIONAL {{?Neuron_ID ilxtr:reference ?Reference.}}
-    }}
+        SELECT DISTINCT ?Neuron_ID ?Reference WHERE{{   
+            {{
+                SELECT ?Neuron_ID ?Reference {{
+                    VALUES(?entity){{({entity})}}
+                    ?Neuron_ID rdfs:subClassOf ?entity .
+                    OPTIONAL {{?Neuron_ID ilxtr:reference ?Reference.}}
+                }}
+            }}
+            UNION
+            {{
+                SELECT ?Neuron_ID ?Reference {{
+                    VALUES(?entity){{({entity})}}
+                    ?Super_Neuron rdfs:subClassOf ?entity .
+                    ?Neuron_ID rdfs:subClassOf ?Super_Neuron .
+                    ?Neuron_ID rdfs:subClassOf ilxtr:NeuronEBM .
+                    OPTIONAL {{?Neuron_ID ilxtr:reference ?Reference.}}
+                }}
+            }}
+        }}
     """
 
     # Query: This query is for loading all object related to a subject
