@@ -1,5 +1,9 @@
-class NAMESPACES:
+class Namespace:
+
     namespaces = {
+        'mmset1'    : 'http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/mmset1/',
+        'mmset2'    : 'http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/mmset2cn/',
+        'mmset4'    : 'http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/mmset4/',
         'ilxtr'     : 'http://uri.interlex.org/tgbugs/uris/readable/',
         'ILX'       : 'http://uri.interlex.org/base/ilx_',
         'rdfs'      : 'http://www.w3.org/2000/01/rdf-schema#',
@@ -11,20 +15,20 @@ class NAMESPACES:
     @staticmethod
     def uri(curie: str) -> str:
         parts = curie.split(':', 1)
-        if len(parts) == 2 and parts[0] in NAMESPACES.namespaces:
-            return NAMESPACES.namespaces[parts[0]] + parts[1]
+        if len(parts) == 2 and parts[0] in Namespace.namespaces:
+            return Namespace.namespaces[parts[0]] + parts[1]
         return curie
 
     @staticmethod
     def curie(uri: str) -> str:
-        for prefix, ns_uri in NAMESPACES.namespaces.items():
+        for prefix, ns_uri in Namespace.namespaces.items():
             if uri.startswith(ns_uri):
                 return f'{prefix}:{uri[len(ns_uri):]}'
         return uri
 
-class QUERIES:
+class Query:
 
-    PREDICATES = {
+    predicates = {
         'SOMA'          : ['ilxtr:hasSomaLocation'],
         'AXON_TERMINAL' : ['ilxtr:hasAxonTerminalLocation', 'ilxtr:hasAxonSensoryLocation'],
         'DENDRITE'      : ['ilxtr:hasDendriteLocation'],
@@ -36,7 +40,7 @@ class QUERIES:
         'LABEL'         : ['rdfs:label'],
     }
 
-    PREFIXES = '\n'.join([f'PREFIX {pref}: <{link}>' for pref, link in NAMESPACES.namespaces.items()]) + '\n'
+    prefixes = '\n'.join([f'PREFIX {pref}: <{link}>' for pref, link in Namespace.namespaces.items()]) + '\n'
 
     MODELS = """
         SELECT DISTINCT ?Model_ID WHERE{
@@ -74,32 +78,6 @@ class QUERIES:
         }}
     """
 
-    # Query: This query is for loading all object related to a subject
-    # This is sufficient to obtain information about a population of neurons. 
-    # The identification of the next attribute is at the code level.
-    # NEURON = """
-    #     SELECT DISTINCT ?Neuron_IRI ?Predicate ?Object ?Object_Label ?Region ?Region_Label ?Layer ?Layer_Label {{
-    #         VALUES(?Neuron_IRI){{({entity})}}
-    #         ?Neuron_IRI ?Predicate ?Object.
-    #         OPTIONAL{{?Object rdfs:label ?Object_Label}}
-    #         OPTIONAL{{
-    #             ?_1 ?Object ?Region .
-    #             OPTIONAL{{?Region rdfs:label ?Region_Label .}}
-    #         }}
-    #         OPTIONAL{{
-    #             ?Neuron_IRI (
-    #                 ilxtr:hasSomaLocation|
-    #                 ilxtr:hasAxonTerminalLocation|
-    #                 ilxtr:hasAxonSensoryLocation|
-    #                 ilxtr:hasDendriteLocation|
-    #                 ilxtr:hasAxonLocation
-    #                 ) ?Object .
-    #             ?_2 ?Layer ?Object .
-    #             OPTIONAL{{?Layer rdfs:label ?Layer_Label .}}
-    #             FILTER(STRSTARTS(STR(?Layer), STR(UBERON:)) || STRSTARTS(STR(?Layer), STR(ILX:)))
-    #         }}
-    #     }}
-    # """
     NEURON = """
         SELECT DISTINCT ?Neuron_IRI ?Predicate ?Object ?Object_Label {{
             VALUES(?Neuron_IRI){{({entity})}}
@@ -128,6 +106,60 @@ class QUERIES:
             OPTIONAL{{TTL:npo.ttl owl:versionInfo ?NPO.}}
             OPTIONAL{{TTL:simple-sckan.ttl owl:versionInfo ?SimpleSCKAN.}}
         }}
-
     """
+
+    # Query: This query is to extract all partial order useful to construct connectivity models
+    # Limitation: Only partial orders in nlp mmset are available
+    NPO_PARTIAL_ORDER = """
+        SELECT DISTINCT
+        ?Neuron_IRI ?Neuron_Label ?V1 ?V1_Label ?V2 ?V2_Label
+        WHERE
+        {
+            ?Neuron_IRI ilxtr:neuronPartialOrder ?o .
+            ?o (rdf:rest|rdf:first)* ?r1 .
+            ?o (rdf:rest|rdf:first)* ?r2 .
+            ?r1 rdf:rest|rdf:first ?V1 .
+            ?r2 rdf:rest|rdf:first ?V2 .
+            ?V1 rdf:type owl:Class .
+            ?V2 rdf:type owl:Class .
+            ?mediator rdf:first ?V1 .  # car
+            ?mediator rdf:rest*/rdf:first/rdf:first ?V2 .  # caadr
+            ?V1 rdfs:label ?V1_Label.
+            ?V2 rdfs:label ?V2_Label.
+            OPTIONAL {?Neuron_IRI rdfs:label ?Neuron_Label.}
+
+        FILTER (?V1 != ?V2).
+        FILTER (CONTAINS(STR(?Neuron_IRI), 'mmset')).  
+        } 
+        ORDER BY ?Neuron_IRI 
+        limit 100000
+    """
+
+    # Query: This query is for loading all object related to a subject
+    # This is sufficient to obtain information about a population of neurons. 
+    # The identification of the next attribute is at the code level.
+    # NEURON = """
+    #     SELECT DISTINCT ?Neuron_IRI ?Predicate ?Object ?Object_Label ?Region ?Region_Label ?Layer ?Layer_Label {{
+    #         VALUES(?Neuron_IRI){{({entity})}}
+    #         ?Neuron_IRI ?Predicate ?Object.
+    #         OPTIONAL{{?Object rdfs:label ?Object_Label}}
+    #         OPTIONAL{{
+    #             ?_1 ?Object ?Region .
+    #             OPTIONAL{{?Region rdfs:label ?Region_Label .}}
+    #         }}
+    #         OPTIONAL{{
+    #             ?Neuron_IRI (
+    #                 ilxtr:hasSomaLocation|
+    #                 ilxtr:hasAxonTerminalLocation|
+    #                 ilxtr:hasAxonSensoryLocation|
+    #                 ilxtr:hasDendriteLocation|
+    #                 ilxtr:hasAxonLocation
+    #                 ) ?Object .
+    #             ?_2 ?Layer ?Object .
+    #             OPTIONAL{{?Layer rdfs:label ?Layer_Label .}}
+    #             FILTER(STRSTARTS(STR(?Layer), STR(UBERON:)) || STRSTARTS(STR(?Layer), STR(ILX:)))
+    #         }}
+    #     }}
+    # """
+
     

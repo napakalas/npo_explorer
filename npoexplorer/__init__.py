@@ -50,11 +50,11 @@ NPO_TO_SCKAN_MODEL = {
 
 #===============================================================================
 
-from npoexplorer.query import QUERIES, NAMESPACES
+from npoexplorer.query import Query, Namespace
 
 #===============================================================================
 
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 
 #===============================================================================
 
@@ -71,8 +71,10 @@ class NPOExplorer():
         self.__labels = {}
         # self.__load_npo_as_graph()
         self.__load_npo_connectivities(allow_loop)
+        self.__load_npo_mmset_connectivities()
 
-        _, db_version = self.__select(QUERIES.DB_VERSION)
+
+        _, db_version = self.__select(Query.DB_VERSION)
         self.__metadata = {'SimpleSCKAN': db_version[0]['SimpleSCKAN']['value'], 
                              'NPO': db_version[0]['NPO']['value']}
         s_sckan_term = f'SimpleSCKAN built at {self.__metadata["SimpleSCKAN"]}'
@@ -134,9 +136,26 @@ class NPOExplorer():
                         parse_connectivities(connectivities, conn_structure[1:], root)
                 self.__connectivities[neuron.strip()] = connectivities
 
+    def __load_npo_mmset_connectivities(self):
+        _, results = self.__select(Query.NPO_PARTIAL_ORDER)
+        for rst in results:
+            neuron_IRI = rst['Neuron_IRI']['value']
+            neuron_label = rst.get('Neuron_Label', {}).get('value', '')
+            v1 = rst.get('V1', {}).get('value', '')
+            v1_label = rst.get('V1_Label', {}).get('value', '')
+            v2 = rst.get('V2', {}).get('value', '')
+            v2_label = rst.get('V2_Label', {}).get('value', '')
+            if v1 != '' or v2 != '':
+                if neuron_IRI not in self.__connectivities:
+                    self.__connectivities[neuron_IRI] = []
+                self.__connectivities[neuron_IRI] += [((v1, ()), (v2, ()))]
+                self.__labels[v1] = v1_label
+                self.__labels[v2] = v2_label
+                self.__labels[neuron_IRI] = neuron_label
+
     def __load_npo_as_graph(self):
         # this function is prepared to generate npo graph
-        # the graph will be useful when the need information is not available in stardog
+        # the graph will be useful when the needed information is not available in stardog
         self.__graph = rdflib.Graph()
         for ttl_file in NPO_FILES.values():
             try:
@@ -145,9 +164,9 @@ class NPOExplorer():
             except:
                 log.ERROR(f'Cannot load {ttl_file}')
         from rdflib.namespace import Namespace
-        rdfs = Namespace(NAMESPACES.namespaces['rdfs'])
+        rdfs = Namespace(Namespace.namespaces['rdfs'])
         for subject, obj in self.__graph.subject_objects(rdfs.label):
-            self.__labels[NAMESPACES.curie(str(subject))] = str(obj)
+            self.__labels[Namespace.curie(str(subject))] = str(obj)
             
     def __select(self, query):
         data = self.__conn.select(query)
@@ -156,33 +175,33 @@ class NPOExplorer():
         for rst in results:
             for k, v in rst.items():
                 if v['type'] == 'uri':
-                    v['value'] = NAMESPACES.curie(v['value'])
+                    v['value'] = Namespace.curie(v['value'])
         return variables, results
 
     def __get_connectivity_models(self):
-        variables, results = self.__select(QUERIES.MODELS)
+        variables, results = self.__select(Query.MODELS)
         models = {}
-        for result in results:
-            value = result[variables[0]]['value']
+        for rst in results:
+            value = rst[variables[0]]['value']
             models[value] = {'label':'', 'version':''}
         return models
 
     def __get_model_knowledge(self, entity):
-        query = QUERIES.MODEL_KNOWLEDGE.format(entity=entity)
+        query = Query.MODEL_KNOWLEDGE.format(entity=entity)
         variables, results = self.__select(query)
         paths, references = [], set()
-        for result in results:
-            path = result[variables[0]]['value']
+        for rst in results:
+            path = rst[variables[0]]['value']
             paths.append({'id':path, 'models':path})
-            if variables[1] in result:
-                reference = result[variables[1]]['value']
+            if variables[1] in rst:
+                reference = rst[variables[1]]['value']
                 references.add(reference)
         return {'id':entity, 'label':entity, 'paths':list(paths), 'references':list(references)}
 
     def __get_neuron_connectivities(self, entity):
         # this function should be a standard method to get partial connectivity from stardog
         # currently is not used
-        query = QUERIES.CONNECTIVITY.format(entity=entity)
+        query = Query.CONNECTIVITY.format(entity=entity)
         _, results = self.__select(query)
         connectivities = []
         if len(results) > 0:
@@ -227,7 +246,7 @@ class NPOExplorer():
         return connectivities
     
     def __get_connectivity_terms(self, entity):
-        query = QUERIES.CONNECTIVITY.format(entity=entity)
+        query = Query.CONNECTIVITY.format(entity=entity)
         _, results = self.__select(query)
         for rst in results:
             if 'Region' in rst:
@@ -238,7 +257,7 @@ class NPOExplorer():
                     self.__labels[rst['Layer']['value']] = rst['Layer_Label']['value'] if 'Layer_Label' in rst else ''
             
     def __get_neuron_knowledge(self, entity):
-        query = QUERIES.NEURON.format(entity=entity)
+        query = Query.NEURON.format(entity=entity)
         _, results = self.__select(query)
 
         if len(results) == 0:
@@ -262,29 +281,29 @@ class NPOExplorer():
         phenotypes, references, taxons, long_label = [], [], [], ''
         for rst in results:
             # get soma
-            if rst['Predicate']['value'] in QUERIES.PREDICATES['SOMA']:
+            if rst['Predicate']['value'] in Query.predicates['SOMA']:
                 get_node(rst, somas)
             # get axon
-            elif rst['Predicate']['value'] in QUERIES.PREDICATES['AXON_TERMINAL']:
+            elif rst['Predicate']['value'] in Query.predicates['AXON_TERMINAL']:
                 get_node(rst, axons)
             # get dendrite
-            elif rst['Predicate']['value'] in QUERIES.PREDICATES['DENDRITE']:
+            elif rst['Predicate']['value'] in Query.predicates['DENDRITE']:
                 get_node(rst, dendrites)
             # get vias
-            if rst['Predicate']['value'] in QUERIES.PREDICATES['AXON_VIA']:
+            if rst['Predicate']['value'] in Query.predicates['AXON_VIA']:
                 get_node(rst, vias)
             # get phenotypes
-            elif rst['Predicate']['value'] in QUERIES.PREDICATES['PHENOTYPE']:
+            elif rst['Predicate']['value'] in Query.predicates['PHENOTYPE']:
                 if rst['Object']['value'].replace('phenotype', 'type') != rst['Neuron_IRI']['value']:
                     phenotypes += [rst['Object']['value']]
             # get references
-            elif rst['Predicate']['value'] in QUERIES.PREDICATES['REFERENCE']:
+            elif rst['Predicate']['value'] in Query.predicates['REFERENCE']:
                 references += [[rst['Object']['value']]]
             # get taxons
-            elif rst['Predicate']['value'] in QUERIES.PREDICATES['TAXON']:
+            elif rst['Predicate']['value'] in Query.predicates['TAXON']:
                 taxons += [[rst['Object']['value']]]
             # get label
-            elif rst['Predicate']['value'] in QUERIES.PREDICATES['LABEL']:
+            elif rst['Predicate']['value'] in Query.predicates['LABEL']:
                 long_label = rst['Object']['value']
             # get all labels
             if 'Object' in rst and rst['Object']['type']=='uri':
@@ -328,7 +347,7 @@ class NPOExplorer():
     def entity_knowledge(self, entity):
         if entity in SCKAN_TO_NPO_MODEL:
             entity = SCKAN_TO_NPO_MODEL[entity]
-        entity = NAMESPACES.curie(entity)
+        entity = Namespace.curie(entity)
         if entity in self.__connectivity_models:
             return self.__get_model_knowledge(entity)
         else:
