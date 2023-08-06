@@ -12,6 +12,10 @@ from urllib.parse import urljoin
 
 #===============================================================================
 
+from npoexplorer.query import Query, Namespace
+
+#===============================================================================
+
 NPO_API_ENDPOINT = 'https://stardog.scicrunch.io:5821'
 NPO_USERNAME = os.environ.get('NPO_USERNAME')
 NPO_PASSWORD = os.environ.get('NPO_PASSWORD')
@@ -50,10 +54,6 @@ NPO_TO_SCKAN_MODEL = {
 
 #===============================================================================
 
-from npoexplorer.query import Query, Namespace
-
-#===============================================================================
-
 __version__ = '0.0.2'
 
 #===============================================================================
@@ -86,11 +86,11 @@ class NPOExplorer():
         # due to unvailability in stardog
         url = f'{NPO_SOURCE}{NPO_DIR}/{NPO_FILES["PARTIAL_ORDER"]}'
         try:
-            response = requests.get(url)
+            response = requests.get(url, timeout=10)
             if response.status_code == 200:
                 partial_order_text = response.text
             else:
-                log.ERROR(f'Failed to load {NPO_FILES["PARTIAL_ORDER"]}. Status code: {response.status_code}')
+                log.error(f'Failed to load {NPO_FILES["PARTIAL_ORDER"]}. Status code: {response.status_code}')
         except requests.exceptions.RequestException as e:
             print(f"An error occurred while fetching the file: {e}")
 
@@ -161,8 +161,8 @@ class NPOExplorer():
             try:
                 ttl_url =  urljoin(f'{NPO_SOURCE}{NPO_DIR}/', f'{ttl_file}')
                 self.__graph.parse(ttl_url, format='turtle')
-            except:
-                log.ERROR(f'Cannot load {ttl_file}')
+            except Exception:
+                log.error(f'Cannot load {ttl_file}')
         from rdflib.namespace import Namespace
         rdfs = Namespace(Namespace.namespaces['rdfs'])
         for subject, obj in self.__graph.subject_objects(rdfs.label):
@@ -173,7 +173,7 @@ class NPOExplorer():
         variables = data['head']['vars']
         results = data['results']['bindings']
         for rst in results:
-            for k, v in rst.items():
+            for v in rst.values():
                 if v['type'] == 'uri':
                     v['value'] = Namespace.curie(v['value'])
         return variables, results
@@ -362,7 +362,7 @@ class NPOExplorer():
         return ''
     
     def metadata(self, name=None):
-        if name==None:
+        if name is None:
             return self.__metadata
         elif name in self.__metadata:
             return self.__metadata[name]

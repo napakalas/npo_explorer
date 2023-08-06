@@ -1,3 +1,4 @@
+
 class Namespace:
 
     namespaces = {
@@ -134,32 +135,4 @@ class Query:
         ORDER BY ?Neuron_IRI 
         limit 100000
     """
-
-    # Query: This query is for loading all object related to a subject
-    # This is sufficient to obtain information about a population of neurons. 
-    # The identification of the next attribute is at the code level.
-    # NEURON = """
-    #     SELECT DISTINCT ?Neuron_IRI ?Predicate ?Object ?Object_Label ?Region ?Region_Label ?Layer ?Layer_Label {{
-    #         VALUES(?Neuron_IRI){{({entity})}}
-    #         ?Neuron_IRI ?Predicate ?Object.
-    #         OPTIONAL{{?Object rdfs:label ?Object_Label}}
-    #         OPTIONAL{{
-    #             ?_1 ?Object ?Region .
-    #             OPTIONAL{{?Region rdfs:label ?Region_Label .}}
-    #         }}
-    #         OPTIONAL{{
-    #             ?Neuron_IRI (
-    #                 ilxtr:hasSomaLocation|
-    #                 ilxtr:hasAxonTerminalLocation|
-    #                 ilxtr:hasAxonSensoryLocation|
-    #                 ilxtr:hasDendriteLocation|
-    #                 ilxtr:hasAxonLocation
-    #                 ) ?Object .
-    #             ?_2 ?Layer ?Object .
-    #             OPTIONAL{{?Layer rdfs:label ?Layer_Label .}}
-    #             FILTER(STRSTARTS(STR(?Layer), STR(UBERON:)) || STRSTARTS(STR(?Layer), STR(ILX:)))
-    #         }}
-    #     }}
-    # """
-
     

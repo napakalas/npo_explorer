@@ -6,4 +6,6 @@ if __name__ == '__main__':
     pprint(explorer.connectivity_models())
     pprint(explorer.entity_knowledge('ilxtr:NeuronKblad'))
     pprint(explorer.entity_knowledge('https://apinatomy.org/uris/models/keast-bladder'))
-    pprint(explorer.entity_knowledge('ilxtr:neuron-type-keast-5'))
+    pprint(explorer.entity_knowledge('ilxtr:neuron-type-keast-10'))
+    pprint(explorer.entity_knowledge('mmset1:12'))
+    explorer.close()
