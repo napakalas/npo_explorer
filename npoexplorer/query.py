@@ -1,21 +1,19 @@
-
 class Namespace:
-
     namespaces = {
-        'mmset1'    : 'http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/mmset1/',
-        'mmset2'    : 'http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/mmset2cn/',
-        'mmset4'    : 'http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/mmset4/',
-        'ilxtr'     : 'http://uri.interlex.org/tgbugs/uris/readable/',
-        'ILX'       : 'http://uri.interlex.org/base/ilx_',
-        'rdfs'      : 'http://www.w3.org/2000/01/rdf-schema#',
-        'UBERON'    : 'http://purl.obolibrary.org/obo/UBERON_',
-        'NCBITaxon' : 'http://purl.obolibrary.org/obo/NCBITaxon_',
-        'rdf'       : 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+        "mmset1": "http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/mmset1/",
+        "mmset2": "http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/mmset2cn/",
+        "mmset4": "http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/mmset4/",
+        "ilxtr": "http://uri.interlex.org/tgbugs/uris/readable/",
+        "ILX": "http://uri.interlex.org/base/ilx_",
+        "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+        "UBERON": "http://purl.obolibrary.org/obo/UBERON_",
+        "NCBITaxon": "http://purl.obolibrary.org/obo/NCBITaxon_",
+        "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
     }
 
     @staticmethod
     def uri(curie: str) -> str:
-        parts = curie.split(':', 1)
+        parts = curie.split(":", 1)
         if len(parts) == 2 and parts[0] in Namespace.namespaces:
             return Namespace.namespaces[parts[0]] + parts[1]
         return curie
@@ -24,24 +22,36 @@ class Namespace:
     def curie(uri: str) -> str:
         for prefix, ns_uri in Namespace.namespaces.items():
             if uri.startswith(ns_uri):
-                return f'{prefix}:{uri[len(ns_uri):]}'
+                return f"{prefix}:{uri[len(ns_uri):]}"
         return uri
 
-class Query:
 
+class Query:
     predicates = {
-        'SOMA'          : ['ilxtr:hasSomaLocation'],
-        'AXON_TERMINAL' : ['ilxtr:hasAxonTerminalLocation', 'ilxtr:hasAxonSensoryLocation'],
-        'DENDRITE'      : ['ilxtr:hasDendriteLocation'],
-        'AXON_VIA'      : ['ilxtr:hasAxonLocation'],
-        'PHENOTYPE'     : ['ilxtr:hasNeuronalPhenotype', 'ilxtr:hasFunctionalCircuitRole',
-                           'ilxtr:hasCircuitRole', 'ilxtr:hasProjection'],
-        'REFERENCE'     : ['ilxtr:reference'],
-        'TAXON'         : ['ilxtr:isObservedInSpecies'],
-        'LABEL'         : ['rdfs:label'],
+        "SOMA": ["ilxtr:hasSomaLocation"],
+        "AXON_TERMINAL": [
+            "ilxtr:hasAxonTerminalLocation",
+            "ilxtr:hasAxonSensoryLocation",
+        ],
+        "DENDRITE": ["ilxtr:hasDendriteLocation"],
+        "AXON_VIA": ["ilxtr:hasAxonLocation"],
+        "PHENOTYPE": [
+            "ilxtr:hasNeuronalPhenotype",
+            "ilxtr:hasFunctionalCircuitRole",
+            "ilxtr:hasCircuitRole",
+            "ilxtr:hasProjection",
+        ],
+        "REFERENCE": ["ilxtr:reference"],
+        "TAXON": ["ilxtr:isObservedInSpecies"],
+        "LABEL": ["rdfs:label"],
     }
 
-    prefixes = '\n'.join([f'PREFIX {pref}: <{link}>' for pref, link in Namespace.namespaces.items()]) + '\n'
+    prefixes = (
+        "\n".join(
+            [f"PREFIX {pref}: <{link}>" for pref, link in Namespace.namespaces.items()]
+        )
+        + "\n"
+    )
 
     MODELS = """
         SELECT DISTINCT ?Model_ID WHERE{
@@ -55,7 +65,7 @@ class Query:
                 ?Model_ID rdfs:subClassOf ilxtr:NeuronApinatSimple .
             }
         }
-    """ 
+    """
 
     MODEL_KNOWLEDGE = """
         SELECT DISTINCT ?Neuron_ID ?Reference WHERE{{   
@@ -135,4 +145,3 @@ class Query:
         ORDER BY ?Neuron_IRI 
         limit 100000
     """
-    
