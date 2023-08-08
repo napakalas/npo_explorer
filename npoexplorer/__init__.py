@@ -50,6 +50,22 @@ NPO_TO_SCKAN_MODEL = {
     term_npo: term_sckan for term_sckan, term_npo in SCKAN_TO_NPO_MODEL.items()
 }
 
+# Layers shouldn't be resolving to
+# ``spinal cord``, etc. nor to ``None``.
+# A SCKAN issue
+EXCLUDED_LAYERS = (
+    None,
+    'UBERON:0000010',      # peripheral nervous system
+    'UBERON:0000178',      # blood
+    'UBERON:0000468',      # multicellular organism
+    'UBERON:0001017',      # central nervous system
+    'UBERON:0001359',      # cerebrospinal fluid
+    'UBERON:0002318',      # spinal cord white matter
+    'UBERON:0003714',      # neural tissue
+    'UBERON:0005844',      # spinal cord segment
+    'UBERON:0016549',      # cns white matter
+)
+
 # ===============================================================================
 
 __version__ = "0.0.2"
@@ -98,7 +114,7 @@ class NPOExplorer:
         except requests.exceptions.RequestException as e:
             print(f"An error occurred while fetching the file: {e}")
 
-        # a function to parse connectivities
+        # functions to parse connectivities
         def parse_connectivities(connectivities, sub_structure, root="blank"):
             for sub_sub in sub_structure:
                 adj = (
@@ -115,6 +131,25 @@ class NPOExplorer:
                 if len(sub_sub) > 1:
                     parse_connectivities(connectivities, sub_sub[1:], adj)
 
+        # function to filter layer terms, returning filtered_edge
+        def filter_layer(connectivity):
+            edge = []
+            for node in connectivity:
+                new_node = []
+                for terms in node:
+                    if isinstance(terms, tuple):
+                        terms = [t for t in terms if t not in EXCLUDED_LAYERS]
+                        new_node += [tuple(terms)]
+                    else:
+                        terms = terms if terms not in EXCLUDED_LAYERS else []
+                        new_node += [terms]
+                if len(new_node[0]) == 0 and len(new_node[1]) == 0:
+                    return []
+                elif len(new_node[0]) == 0:
+                    new_node = [new_node[1][0], tuple(list(new_node[1])[1:])]
+                edge += [tuple(new_node)]
+            return tuple(edge)
+
         self.__connectivities = {}
         for partial_order in partial_order_text.split("\n\n"):
             if "neuronPartialOrder" in partial_order:
@@ -123,7 +158,8 @@ class NPOExplorer:
                 )
                 nested_structure = nested_structure.replace(".", "")
                 # replace consecutive space with a single space
-                nested_structure = re.sub(r"\s+", " ", nested_structure).strip()
+                nested_structure = re.sub(
+                    r"\s+", " ", nested_structure).strip()
                 # adding coma
                 pattern = r"\[([^]]+)\]"
 
@@ -153,7 +189,11 @@ class NPOExplorer:
                             if isinstance(conn_structure[0], list)
                             else (conn_structure[0], ())
                         )
-                        parse_connectivities(connectivities, conn_structure[1:], root)
+                        parse_connectivities(
+                            connectivities, conn_structure[1:], root)
+                # filter connectivities based on EXCLUDE_LAYERS
+                connectivities = [filter_layer(
+                    c) for c in connectivities if len(filter_layer(c)) > 0]
                 self.__connectivities[neuron.strip()] = connectivities
 
     def __load_npo_mmset_connectivities(self):
@@ -344,7 +384,8 @@ class NPOExplorer:
             for obj, lr in nodes.items():
                 node = lr["region"] + [obj] + lr["layer"]
                 combines += [
-                    (node[0], tuple(node[1:])) if len(node) > 1 else (node[0], ())
+                    (node[0], tuple(node[1:])) if len(
+                        node) > 1 else (node[0], ())
                 ]
             return combines
 

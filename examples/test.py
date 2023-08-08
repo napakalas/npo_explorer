@@ -9,4 +9,5 @@ if __name__ == "__main__":
     pprint(explorer.entity_knowledge("https://apinatomy.org/uris/models/keast-bladder"))
     pprint(explorer.entity_knowledge("ilxtr:neuron-type-keast-10"))
     pprint(explorer.entity_knowledge("mmset1:12"))
+    pprint(explorer.entity_knowledge("ilxtr:neuron-type-aacar-13"))
     explorer.close()
