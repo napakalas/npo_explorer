@@ -1,8 +1,10 @@
 class Namespace:
     namespaces = {
         "mmset1": "http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/mmset1/",
-        "mmset2": "http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/mmset2cn/",
+        "mmset2cn": "http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/mmset2cn/",
         "mmset4": "http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/mmset4/",
+        "prostate": "http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/prostate/",
+        "semves": "http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/semves/",
         "ilxtr": "http://uri.interlex.org/tgbugs/uris/readable/",
         "ILX": "http://uri.interlex.org/base/ilx_",
         "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
@@ -20,6 +22,7 @@ class Namespace:
 
     @staticmethod
     def curie(uri: str) -> str:
+        uri = Namespace.uri(uri)
         for prefix, ns_uri in Namespace.namespaces.items():
             if uri.startswith(ns_uri):
                 return f"{prefix}:{uri[len(ns_uri):]}"

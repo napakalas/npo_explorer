@@ -14,7 +14,8 @@ from npoexplorer.query import Namespace, Query
 
 # ===============================================================================
 
-NPO_API_ENDPOINT = "https://stardog.scicrunch.io:5821"
+ENDPOINT_STARDOG = "https://sd-63f05fc2.stardog.cloud:5820"
+ENDPOINT_BLAZEGRAPH = "https://blazegraph.scicrunch.io/blazegraph/sparql"
 NPO_USERNAME = os.environ.get("NPO_USERNAME")
 NPO_PASSWORD = os.environ.get("NPO_PASSWORD")
 DB_NAME = "NPO"
@@ -72,16 +73,40 @@ __version__ = "0.0.2"
 
 # ===============================================================================
 
+class SPARQLConnection(stardog.Connection):
+    def __init__(self, endpoint) -> None:
+        self.__ep = endpoint
+        if endpoint == ENDPOINT_STARDOG:
+            connection_details = {
+                "endpoint": endpoint,
+                "username": NPO_USERNAME,
+                "password": NPO_PASSWORD,
+            }
+            super().__init__(DB_NAME, **connection_details)
+            super().begin()
+
+    def select(self, query):
+        if self.__ep == ENDPOINT_STARDOG:
+            return super().select(query)
+        elif self.__ep == ENDPOINT_BLAZEGRAPH:
+            headers = {
+                "Accept": "application/sparql-results+json",  # Set the desired response format
+            }
+            params = {
+                "query": query,
+            }
+            response = requests.get(self.__ep, headers=headers, params=params, timeout=10)
+            return response.json()
+
+    def close(self):
+        if self.__ep == ENDPOINT_STARDOG:
+            super().close()
+
+# ===============================================================================
 
 class NPOExplorer:
-    def __init__(self, allow_loop=False) -> None:
-        connection_details = {
-            "endpoint": NPO_API_ENDPOINT,
-            "username": NPO_USERNAME,
-            "password": NPO_PASSWORD,
-        }
-        self.__conn = stardog.Connection(DB_NAME, **connection_details)
-        self.__conn.begin()
+    def __init__(self, allow_loop=False, endpoint=ENDPOINT_STARDOG) -> None:
+        self.__conn = SPARQLConnection(endpoint)
         self.__connectivity_models = self.__get_connectivity_models()
         self.__labels = {}
         # self.__load_npo_as_graph()
