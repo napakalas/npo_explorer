@@ -464,7 +464,7 @@ class NPOExplorer:
         dendrites = combine_layer_regions(dendrites)
 
         # connectivities = self.__get_neuron_connectivities(entity)
-        connectivities = self.__connectivities[entity]
+        connectivities = self.__connectivities.get(entity, [])
 
         # get required connectivity terms
         self.__get_connectivity_terms(entity)

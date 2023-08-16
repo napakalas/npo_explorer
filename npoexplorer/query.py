@@ -142,8 +142,8 @@ class Query:
             ?V2 rdfs:label ?V2_Label.
             OPTIONAL {?Neuron_IRI rdfs:label ?Neuron_Label.}
 
-        FILTER (?V1 != ?V2).
-        FILTER (CONTAINS(STR(?Neuron_IRI), 'mmset')).  
+        FILTER (?V1 != ?V2) .
+        FILTER (CONTAINS(STR(?Neuron_IRI), 'sparc-nlp')) .
         } 
         ORDER BY ?Neuron_IRI 
         limit 100000
