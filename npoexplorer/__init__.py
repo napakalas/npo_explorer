@@ -74,7 +74,7 @@ __version__ = "0.0.2"
 # ===============================================================================
 
 class SPARQLConnection(stardog.Connection):
-    def __init__(self, endpoint) -> None:
+    def __init__(self, endpoint=ENDPOINT_BLAZEGRAPH) -> None:
         self.__ep = endpoint
         if endpoint == ENDPOINT_STARDOG:
             connection_details = {
