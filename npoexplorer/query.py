@@ -28,6 +28,12 @@ class Namespace:
                 return f"{prefix}:{uri[len(ns_uri):]}"
         return uri
 
+    @staticmethod
+    def is_curie(curie: str) -> bool:
+        if ':' in curie:
+            return True
+        return False
+
 
 class Query:
     predicates = {
@@ -93,10 +99,30 @@ class Query:
     """
 
     NEURON = """
-        SELECT DISTINCT ?Neuron_IRI ?Predicate ?Object ?Object_Label {{
-            VALUES(?Neuron_IRI){{({entity})}}
-            ?Neuron_IRI ?Predicate ?Object.
-            OPTIONAL{{?Object rdfs:label ?Object_Label}}
+        SELECT * WHERE {{
+        {{
+            SELECT DISTINCT ?Neuron_IRI ?Predicate ?Object ?Object_Label {{
+                VALUES(?Neuron_IRI){{({entity})}}
+                ?Neuron_IRI ?Predicate ?Object.
+                OPTIONAL{{?Object rdfs:label ?Object_Label}}
+            }}
+        }}
+        UNION
+        {{
+            SELECT DISTINCT ?Neuron_IRI ?Predicate ?Object ?Object_Label {{
+                VALUES(?Neuron_IRI){{({entity})}}
+                ?Neuron_IRI ?Predicate ?Phenotype.
+                ?Phenotype rdfs:subClassOf ?Object.
+                OPTIONAL{{?Object rdfs:label ?Object_Label}}
+                FILTER (
+                ?Predicate IN (
+                    ilxtr:hasNeuronalPhenotype,
+                    ilxtr:hasFunctionalCircuitRole,
+                    ilxtr:hasCircuitRole,ilxtr:hasProjection
+                )
+                )
+            }}
+        }}
         }}
     """
 
