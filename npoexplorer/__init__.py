@@ -45,6 +45,7 @@ SCKAN_TO_NPO_MODEL = {
     "https://apinatomy.org/uris/models/sawg-distal-colon": "ilxtr:NeuronSdcol",
     "https://apinatomy.org/uris/models/spleen": "ilxtr:NeuronSplen",
     "https://apinatomy.org/uris/models/sawg-stomach": "ilxtr:NeuronSstom",
+    "ilxtr:NeuronSparcNlp": "ilxtr:NeuronSparcNlp",
 }
 
 NPO_TO_SCKAN_MODEL = {
@@ -95,8 +96,12 @@ class SPARQLConnection(stardog.Connection):
             params = {
                 "query": query,
             }
-            response = requests.get(self.__ep, headers=headers, params=params, timeout=10)
-            return response.json()
+            response = requests.get(
+                self.__ep, headers=headers, params=params, timeout=10)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                return {}
 
     def close(self):
         if self.__ep == ENDPOINT_STARDOG:
@@ -104,14 +109,17 @@ class SPARQLConnection(stardog.Connection):
 
 # ===============================================================================
 
+
 class NPOExplorer:
     def __init__(self, allow_loop=False, endpoint=ENDPOINT_STARDOG) -> None:
         self.__conn = SPARQLConnection(endpoint)
         self.__connectivity_models = self.__get_connectivity_models()
         self.__labels = {}
         # self.__load_npo_as_graph()
-        self.__load_npo_connectivities(allow_loop)
-        self.__load_npo_mmset_connectivities()
+        self.__load_npo_apinat_connectivities(allow_loop)
+        self.__load_npo_nlp_connectivities()
+
+        self.__knowledge = {}
 
         _, db_version = self.__select(Query.DB_VERSION)
         self.__metadata = {
@@ -124,7 +132,7 @@ class NPOExplorer:
             f"NPO Explorer version {__version__} using {s_sckan_term} and {npo_term}"
         )
 
-    def __load_npo_connectivities(self, allow_loop):
+    def __load_npo_apinat_connectivities(self, allow_loop):
         # loading partial connectivities from NPO repository
         # due to unvailability in stardog
         url = f'{NPO_SOURCE}{NPO_DIR}/{NPO_FILES["PARTIAL_ORDER"]}'
@@ -217,11 +225,15 @@ class NPOExplorer:
                         parse_connectivities(
                             connectivities, conn_structure[1:], root)
                 # filter connectivities based on EXCLUDE_LAYERS
-                connectivities = [filter_layer(
-                    c) for c in connectivities if len(filter_layer(c)) > 0]
-                self.__connectivities[neuron.strip()] = connectivities
+                filtered_connectivities = []
+                for c in connectivities:
+                    edge = filter_layer(c)
+                    if len(edge) > 0:
+                        if edge[0] != edge[1]:
+                            filtered_connectivities += [edge]
+                self.__connectivities[neuron.strip()] = filtered_connectivities
 
-    def __load_npo_mmset_connectivities(self):
+    def __load_npo_nlp_connectivities(self):
         _, results = self.__select(Query.NPO_PARTIAL_ORDER)
         for rst in results:
             neuron_IRI = rst["Neuron_IRI"]["value"]
@@ -256,8 +268,8 @@ class NPOExplorer:
 
     def __select(self, query):
         data = self.__conn.select(query)
-        variables = data["head"]["vars"]
-        results = data["results"]["bindings"]
+        variables = data.get("head", {}).get("vars", [])
+        results = data.get("results", {}).get("bindings", [])
         for rst in results:
             for v in rst.values():
                 if v["type"] == "uri":
@@ -395,7 +407,7 @@ class NPOExplorer:
         _, results = self.__select(query)
 
         if len(results) == 0:
-            return {"label": entity}
+            return {"id": entity, "label": entity}
 
         def get_node(rst, nodes):
             obj = rst["Object"]["value"]
@@ -467,7 +479,8 @@ class NPOExplorer:
         connectivities = self.__connectivities.get(entity, [])
 
         # get required connectivity terms
-        self.__get_connectivity_terms(entity)
+        if Namespace.is_curie(entity):
+            self.__get_connectivity_terms(entity)
 
         return {
             "soma": somas,
@@ -476,7 +489,7 @@ class NPOExplorer:
             "dendrites": dendrites,
             "errors": [],
             "id": entity,
-            "label": entity,
+            "label": long_label,
             "long-label": long_label,
             "phenotypes": phenotypes,
             "references": references,
@@ -487,13 +500,26 @@ class NPOExplorer:
         return self.__connectivity_models
 
     def entity_knowledge(self, entity):
+        # check entity url, when using scicrunch this can be different
         if entity in SCKAN_TO_NPO_MODEL:
             entity = SCKAN_TO_NPO_MODEL[entity]
         entity = Namespace.curie(entity)
-        if entity in self.__connectivity_models:
-            return self.__get_model_knowledge(entity)
+
+        # if entity is in __knowledge then retrieve from __knowledge
+        if entity in self.__knowledge:
+            return self.__knowledge.get(entity)
+
+        # if not, retrive from endpoint
+        # check if entity in curie form or not
+        if Namespace.is_curie(entity):
+            if entity in self.__connectivity_models:
+                self.__knowledge[entity] = self.__get_model_knowledge(entity)
+                return self.__knowledge[entity]
+            else:
+                self.__knowledge[entity] = self.__get_neuron_knowledge(entity)
+                return self.__knowledge[entity]
         else:
-            return self.__get_neuron_knowledge(entity)
+            return {"id":entity, "label": entity}
 
     def labels(self):
         return self.__labels
